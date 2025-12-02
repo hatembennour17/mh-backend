@@ -43,8 +43,9 @@ const squareClient = new Client({
 // Middleware
 app.use(express.json());
 app.use(cors({
-  origin: ['https://your-tiiny-site.tiiny.site'],
-  credentials: true
+  origin: 'https://www.mandhdistributions.com', // Your exact frontend URL
+  credentials: true, // Keep this only if you send cookies/authorization headers
+  optionsSuccessStatus: 200 // For legacy browser support
 }));
 
 let orderIdCounter = orders.length + 1;
