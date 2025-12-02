@@ -1,8 +1,9 @@
 ﻿
 require('dotenv').config();
-const express = require('express');
+
 const { Client, Environment } = require('square');
 const cors = require('cors');
+const express = require('express');
 const fs = require('fs');
 const path = require('path');
 
@@ -41,12 +42,12 @@ const squareClient = new Client({
 });
 
 // Middleware
-app.use(express.json());
+
 app.use(cors({
   origin: 'https://www.mandhdistributions.com', // Your exact frontend URL
-  credentials: true, // Keep this only if you send cookies/authorization headers
   optionsSuccessStatus: 200 // For legacy browser support
 }));
+app.use(express.json());
 
 let orderIdCounter = orders.length + 1;
 // Add this health check route (Railway needs this)
