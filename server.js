@@ -6,6 +6,8 @@ const cors = require('cors');
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
+const { Resend } = require('resend');
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 const app = express();
 const PORT = process.env.PORT || 0; // 0 means use any available port
@@ -34,7 +36,60 @@ function saveOrdersToFile() {
     console.error('❌ Error saving orders to file:', error);
   }
 }
-
+// Function to sent email after successful payment
+async function sendOrderConfirmationEmail(customer, order, total, items, customerDetails) {
+// Inside your POST /api/orders route, AFTER successful payment
+try {
+  const emailResponse = await resend.emails.send({
+    from: 'M&H Distributions <orders@mandhdistributions.com>',
+    to: [customer], // customer email from req.body
+    subject: `Order Confirmation - Order #${order.id}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h1 style="color: #333;">Thank You For Your Order!</h1>
+        <p>Hi ${customerDetails.firstName},</p>
+        <p>Your order <strong>#${order.id}</strong> has been confirmed.</p>
+        
+        <h2>Order Details</h2>
+        <table style="width: 100%; border-collapse: collapse;">
+          <tr>
+            <td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Total:</strong></td>
+            <td style="padding: 8px; border-bottom: 1px solid #ddd;">$${total.toFixed(2)}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Items:</strong></td>
+            <td style="padding: 8px; border-bottom: 1px solid #ddd;">${items}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Date:</strong></td>
+            <td style="padding: 8px; border-bottom: 1px solid #ddd;">${new Date().toLocaleDateString()}</td>
+          </tr>
+        </table>
+        
+        <h2>Shipping To</h2>
+        <p>
+          ${customerDetails.firstName} ${customerDetails.lastName}<br>
+          ${customerDetails.address}<br>
+          ${customerDetails.city}, ${customerDetails.state} ${customerDetails.zipCode}
+        </p>
+        
+        <p>We'll notify you when your order ships.</p>
+        <p style="color: #666; font-size: 0.9em;">Thank you for shopping with M&H Distributions!</p>
+      </div>
+    `,
+    text: `Thank you for your order #${order.id}. Total: $${total}. Shipping to: ${customerDetails.address}, ${customerDetails.city}, ${customerDetails.state}. We'll notify you when it ships.`
+  });
+  
+  console.log('✅ Confirmation email sent:', emailResponse.data?.id);
+  order.emailSent = true;
+  order.emailId = emailResponse.data?.id;
+  
+} catch (emailError) {
+  console.error('❌ Email sending failed:', emailError);
+  // Don't fail the order if email fails
+  order.emailSent = false;
+}
+}
 // Square client configuration
 const squareClient = new Client({
   environment: process.env.SQUARE_ENVIRONMENT === 'production' ? Environment.Production : Environment.Sandbox,
@@ -158,7 +213,9 @@ app.post('/api/orders', async (req, res) => {
     
     orders.push(order);
     saveOrdersToFile();
-    
+    sendOrderConfirmationEmail(customer, order, total, items, customerDetails);
+
+
     console.log('✅ Order created:', order.id);
     console.log('👤 Customer:', customerDetails.firstName, customerDetails.lastName);
     console.log('📧 Email:', customer);
