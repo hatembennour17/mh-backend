@@ -41,7 +41,7 @@ async function sendOrderConfirmationEmail(customer, order, total, items, custome
 // Inside your POST /api/orders route, AFTER successful payment
 try {
   const emailResponse = await resend.emails.send({
-    from: 'M&H Distributions <orders@mandhdistributions.com>',
+    from: 'onboarding@resend.dev',
     to: [customer], // customer email from req.body
     subject: `Order Confirmation - Order #${order.id}`,
     html: `
